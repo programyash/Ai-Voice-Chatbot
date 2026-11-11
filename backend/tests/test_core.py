@@ -78,9 +78,10 @@ def test_api_health_and_safe_cloud_gate():
         assert client.get("/api/projects").status_code == 200
         local_chat = client.post("/api/chat", json={"message": "Tell me about Project A"})
         assert local_chat.status_code == 200 and local_chat.json()["mode"] == "local_reference"
-        assert "Source excerpt" in local_chat.json()["answer"]
+        assert "villa plots" in local_chat.json()["answer"].lower()
+        assert "assignment" not in local_chat.json()["answer"].lower()
         unknown = client.post("/api/chat", json={"message": "What is the current availability of 300 sq yd plots?"})
-        assert "does not specify current availability" in unknown.json()["answer"]
+        assert "current availability" in unknown.json()["answer"].lower()
         assert client.post("/api/chat", json={"message": "   "}).status_code == 422
         assert client.get("/api/admin/leads").status_code == 403
         assert client.post("/api/leads", json={"name": "Ada", "mobile": "9876543210", "consent": False}).status_code == 422
@@ -113,4 +114,11 @@ def test_agent_reuses_conversation_history_without_network(monkeypatch):
     assert len(calls) == 2
     assert [item.role for item in calls[1]] == ["user", "model"]
     assert service.history(conversation_id)[-1]["body"] == "Documented answer"
+
+
+def test_customer_answer_removes_internal_references():
+    raw = "INR 80,000 [Assignment - AI Voice Bot Development.pdf, page 2]. These are assignment-provided indications rather than verified live quotations."
+    answer = service.customer_answer(raw)
+    assert "pdf" not in answer.lower() and "assignment" not in answer.lower()
+    assert "INR 80,000" in answer and "verified live quotations" in answer
 

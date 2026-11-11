@@ -17,17 +17,16 @@ try {
     const dimensions = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }))
     await page.getByRole('button', { name: 'Project B', exact: true }).click()
     const projectSwitchWorks = await page.getByText('Everything within reach.').isVisible()
-    await page.getByRole('button', { name: /Make an inquiry/i }).click()
-    const inquiryWorks = await page.getByRole('dialog').isVisible()
-    await page.getByRole('button', { name: 'Close inquiry' }).click()
+    const removedActions = (await page.getByRole('button', { name: /Make an inquiry|Request a call|Explore/i }).count()) === 0 && (await page.getByRole('link', { name: 'Explore' }).count()) === 0
     await page.getByRole('button', { name: 'Tell me about the villa plots' }).click()
     await page.locator('.message.assistant').waitFor()
-    const textChatWorks = (await page.locator('.message.assistant').innerText()).length > 20
-    results.push({ name, ...dimensions, projectSwitchWorks, inquiryWorks, textChatWorks, errors })
+    const answer = await page.locator('.message.assistant').innerText()
+    const textChatWorks = answer.length > 20 && !/assignment|\.pdf|page\s+\d+/i.test(answer)
+    results.push({ name, ...dimensions, projectSwitchWorks, removedActions, textChatWorks, errors })
     await context.close()
   }
 } finally {
   await browser.close()
 }
 console.log(JSON.stringify(results, null, 2))
-if (results.some(x => x.document > x.viewport || !x.projectSwitchWorks || !x.inquiryWorks || !x.textChatWorks || x.errors.length)) process.exitCode = 1
+if (results.some(x => x.document > x.viewport || !x.projectSwitchWorks || !x.removedActions || !x.textChatWorks || x.errors.length)) process.exitCode = 1

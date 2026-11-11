@@ -53,6 +53,8 @@ Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api` and `/w
 
 On systems where `py -3.11` is unavailable, use an installed Python 3.11+ executable to create `.venv`. This workspace used the Codex bundled Python 3.12 runtime.
 
+For the backend test suite, install `backend/requirements-dev.txt` instead of `backend/requirements.txt`.
+
 ## Gemini setup and cloud knowledge switch
 
 The backend reads model names from `.env`: `GEMINI_CHAT_MODEL`, `GEMINI_LIVE_MODEL`, and `GEMINI_EMBEDDING_MODEL`. Default chat is `gemini-3.5-flash-lite` because a content-free call to `gemini-3.8-flash` returned a temporary high-demand 503. The embedding default is `gemini-embedding-001`; Live defaults to `gemini-3.8-live` with `GEMINI_LIVE_API_VERSION=v1alpha`. Model names should be checked against [Google's model list](https://ai.google.dev/gemini-api/docs/models) for the account before changing them.
@@ -71,7 +73,7 @@ The admin route `POST /api/admin/reindex` rebuilds missing/stale embeddings afte
 
 Customers can ask questions by text, choose English, Hindi, or Hinglish, or press the microphone for a live session. The browser streams 16-bit mono PCM at 16 kHz over the local WebSocket. The backend forwards audio to Gemini Live; generated 24 kHz PCM is played in the browser. Audio and text transcriptions are shown in the conversation. Speaking over playback stops local playback; Gemini interruption events also clear it. A failed connection is shown as an error, with retry on reconnect.
 
-The inquiry dialog stores leads, site visit requests and callbacks only after the consent box is checked. A visit is saved as **pending confirmation**, not booked. Admin access to stored contacts uses `X-Admin-Token`; see [tools](docs/TOOLS.md).
+The assistant can record leads, site visit requests and callbacks through validated tools when the customer checks the contact-storage consent box. A visit is saved as **pending confirmation**, not booked. Admin access to stored contacts uses `X-Admin-Token`; see [tools](docs/TOOLS.md).
 
 ## Security and retention
 

@@ -14,6 +14,23 @@ from .. import tools as domain
 PROMPT = (Path(__file__).parent / "prompts" / "system_prompt.md").read_text(encoding="utf-8")
 
 
+def customer_answer(text: str) -> str:
+    """Keep provenance internal while preserving factual uncertainty."""
+    text = re.sub(r"\[[^\]]*\.pdf[^\]]*\]|\([^)]*\.pdf[^)]*\)", "", text, flags=re.I)
+    text = re.sub(r"Assignment\s*[-–—]\s*AI Voice Bot Development\.pdf(?:,?\s*pages?\s*[\d–-]+)?", "", text, flags=re.I)
+    text = re.sub(r"\bassignment[- ]provided indications\b", "indicative figures", text, flags=re.I)
+    text = re.sub(r"\bassignment[- ]provided\b", "indicative", text, flags=re.I)
+    text = re.sub(r"\bfigures are indicative figures\b", "figures are indicative", text, flags=re.I)
+    text = re.sub(r"\b(?:the|our) assignment(?: documents?)?\b", "the available information", text, flags=re.I)
+    text = re.sub(r"\bavailable documentation\b", "available information", text, flags=re.I)
+    text = re.sub(r"\b(?:according to|as stated in|as noted in) the available information\b", "", text, flags=re.I)
+    text = re.sub(r"^(?:the )?available information (?:notes|indicates|states|shows)\s+", "", text, flags=re.I)
+    text = re.sub(r"\b(?:on )?page\s+\d+\b", "", text, flags=re.I)
+    text = re.sub(r"\s+([.,;:])", r"\1", text)
+    text = text.strip()
+    return text[:1].upper() + text[1:] if text else text
+
+
 def create_conversation(language: str = "en") -> str:
     conversation_id = str(uuid.uuid4())
     with connection() as db:
@@ -103,12 +120,13 @@ def chat(conversation_id: str, message: str, language: str = "en", consent_to_st
     evidence = retrieve(context_query, limit=5)
     if not settings.allow_knowledge_export or not settings.gemini_api_key:
         if re.search(r"\b(availability|inventory|booking charges?|payment plans?|travel times?|guaranteed? returns?)\b", message, re.I):
-            answer = "The assignment does not specify current availability, booking charges, payment plans or travel times, and it does not guarantee returns. A sales team member would need to confirm current details."
+            answer = "Current availability, booking charges, payment plans and travel times are not confirmed. A sales team member would need to verify current details. Investment returns are not guaranteed."
         elif evidence:
             best = evidence[0]
-            answer = f"Source excerpt - {best['source']}, page {best['page']} ({best['section']}):\n{best['text']}"
+            answer = best["text"]
         else:
-            answer = "The available assignment does not specify an answer to that question."
+            answer = "I don't have confirmed information to answer that question."
+        answer = customer_answer(answer)
         save_message(conversation_id, "user", message)
         save_message(conversation_id, "assistant", answer)
         return {"conversation_id": conversation_id, "answer": answer, "mode": "local_reference",
@@ -125,7 +143,7 @@ def chat(conversation_id: str, message: str, language: str = "en", consent_to_st
         ),
     )
     response = chat_session.send_message(message)
-    answer = (response.text or "").strip()
+    answer = customer_answer(response.text or "")
     if not answer:
         raise RuntimeError("Gemini returned no answer. Please retry.")
     save_message(conversation_id, "user", message)

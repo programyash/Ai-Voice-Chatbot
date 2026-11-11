@@ -1,4 +1,4 @@
-"""Offline retrieval check; optional live answer smoke evaluation after approval."""
+"""Retrieval check; optional grounded Gemini answer evaluation after approval."""
 import argparse
 import json
 import sys

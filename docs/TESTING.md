@@ -3,6 +3,7 @@
 From the project root:
 
 ```powershell
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
 .\.venv\Scripts\python.exe -m pytest backend/tests -q
 .\.venv\Scripts\python.exe -m backend.evaluate
 ```
@@ -14,7 +15,7 @@ npm run build
 node scripts/visual-check.mjs
 ```
 
-The visual check uses an isolated headless Chrome profile and assumes the backend is at port 8000 and Vite is at port 5173. It checks desktop/mobile overflow, project switching, inquiry dialog opening, and browser page errors, then writes temporary screenshots under `tmp/`.
+The visual check uses an isolated headless Chrome profile and assumes the backend is at port 8000 and Vite is at port 5173. It checks desktop/mobile overflow, project switching, text chat, removal of the extra navigation/inquiry actions, and browser page errors, then writes temporary screenshots under `tmp/`.
 
 The evaluation dataset at `backend/evaluation_cases.json` contains 46 single-turn questions and four multi-turn scenarios, covering township, connectivity, projects, investment caveats, Hindi/Hinglish, unknowns and prompt injection. Offline evaluation checks whether the expected source section appears in the top three retrieved chunks. Current result: **44/44 known-fact cases (100%)** with keyword retrieval. This is a source-location metric; it does not prove generated answer quality.
 
