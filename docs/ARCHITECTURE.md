@@ -21,5 +21,5 @@ Text chat loads the last 12 messages from its conversation ID, retrieves top sou
 
 The browser's AudioWorklet resamples microphone input to 16 kHz and quantizes it to little-endian 16-bit PCM. The backend WebSocket opens a Gemini Live session, forwards chunks, handles model tool calls, returns 24 kHz PCM and transcription events, and closes resources when the session ends. The browser schedules audio buffers and stops them on local speech or interruption. The backend holds the Gemini key throughout.
 
-`ALLOW_KNOWLEDGE_EXPORT=false` blocks embedding, source OCR, Gemini text answers and Live at the server. This is a deliberate gate following automatic approval review. Text requests return attributed local source excerpts. Keyword retrieval, structured facts, inquiry capture and admin management remain local.
+`ALLOW_KNOWLEDGE_EXPORT=false` blocks embedding, source OCR, Gemini text answers and Live at the server. Text requests then return attributed local source excerpts. Keyword retrieval, structured facts, inquiry capture and admin management remain local. The user approved cloud knowledge transfer for this workspace, and its ignored local `.env` enables the switch. New installations default to `false`.
 

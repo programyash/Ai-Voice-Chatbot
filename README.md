@@ -6,9 +6,9 @@ A real estate voice and text assistant built from the three-page AI Voice Bot as
 
 - The local knowledge base contains a page-verified transcription of the scanned assignment PDF. An unrelated sentence embedded in the source page was excluded from the knowledge facts.
 - The React interface, backend, SQLite persistence, ten agent tools, and audio bridge are implemented. Backend tests and the frontend build pass.
-- Gemini text and embedding endpoints responded to content-free probes with the supplied key. A content-free area-conversion function call also worked.
-- Cloud transfer of assignment facts is **disabled** by `ALLOW_KNOWLEDGE_EXPORT=false`. Automatic approval review rejected that transfer because it would send private PDF contents to Google. Text questions remain available in a clearly labeled local source-excerpt mode; Gemini conversational answers and live voice using those facts remain disabled until explicitly approved.
-- Content-free Gemini Live connection probes returned HTTP 404 for both `gemini-3.8-live` and `gemini-3.1-flash-live-preview`. Live audio could not be verified with this key/network. The UI reports a disconnected or error state if connection fails.
+- The user approved sending the reviewed assignment facts to Gemini. This workspace's ignored `.env` enables the cloud knowledge switch; all seven source chunks have Gemini embeddings in SQLite. Grounded English and Hindi text answers, function calling, and multi-turn memory were verified.
+- A content-free Live probe initially returned HTTP 404 because the installed SDK used the wrong WebSocket API version. Setting `GEMINI_LIVE_API_VERSION=v1alpha` resolved it. The local WebSocket received generated 24 kHz audio, and a browser test streamed synthetic microphone audio, received transcription, and played the model response.
+- The complete evaluation ran: 44/44 known-fact retrieval targets in the top three, 38/46 exact answer-fragment matches, seven correct paraphrases flagged for review, and one transient transport error that succeeded on retry. Four multi-turn scenarios completed.
 
 ## Stack and architecture
 
@@ -33,7 +33,7 @@ py -3.11 -m venv .venv
 Copy-Item .env.example .env
 ```
 
-Edit `.env` and set `GEMINI_API_KEY` and a long random `ADMIN_TOKEN`. The supplied key has been placed in the ignored local `.env` for this workspace. Do not put it into frontend files or commit it. Keep `ALLOW_KNOWLEDGE_EXPORT=false` until transfer of the assignment text to Google is approved.
+Edit `.env` and set `GEMINI_API_KEY` and a long random `ADMIN_TOKEN`. The supplied key has been placed in the ignored local `.env` for this workspace. Do not put it into frontend files or commit it. The user approved assignment-content transfer for this workspace, so its local `.env` sets `ALLOW_KNOWLEDGE_EXPORT=true`. The distributed `.env.example` defaults to `false` for new installations.
 
 Start the backend:
 
@@ -55,11 +55,11 @@ On systems where `py -3.11` is unavailable, use an installed Python 3.11+ execut
 
 ## Gemini setup and cloud knowledge switch
 
-The backend reads model names from `.env`: `GEMINI_CHAT_MODEL`, `GEMINI_LIVE_MODEL`, and `GEMINI_EMBEDDING_MODEL`. Default chat is `gemini-3.5-flash-lite` because a content-free call to `gemini-3.8-flash` returned a temporary high-demand 503. The embedding default is `gemini-embedding-001`; Live defaults to `gemini-3.8-live`. Model names should be checked against [Google's model list](https://ai.google.dev/gemini-api/docs/models) for the account before changing them.
+The backend reads model names from `.env`: `GEMINI_CHAT_MODEL`, `GEMINI_LIVE_MODEL`, and `GEMINI_EMBEDDING_MODEL`. Default chat is `gemini-3.5-flash-lite` because a content-free call to `gemini-3.8-flash` returned a temporary high-demand 503. The embedding default is `gemini-embedding-001`; Live defaults to `gemini-3.8-live` with `GEMINI_LIVE_API_VERSION=v1alpha`. Model names should be checked against [Google's model list](https://ai.google.dev/gemini-api/docs/models) for the account before changing them.
 
 Once the source transfer is approved, set `ALLOW_KNOWLEDGE_EXPORT=true` and restart the backend. Startup embeds the existing knowledge chunks. The chat route sends retrieved assignment excerpts and recent conversation turns to Gemini. The Live route supplies a generic advisor instruction and retrieval tools; retrieved facts are sent to Gemini only when requested by the model. Scanned PDF OCR also sends rendered page images to Gemini. **This switch controls all of those transfers.** With the switch off, text chat returns verbatim local source excerpts instead of pretending to be an LLM answer.
 
-Use `/api/health` to inspect `text_mode`, `embedded_chunks` and `voice_available`. A successful Live session must still be verified with the account; `voice_available` means configured, not connected. Run `python -m backend.live_probe` for a content-free Live connectivity check.
+Use `/api/health` to inspect `text_mode`, `embedded_chunks` and `voice_available`. `voice_available` means configured; the UI changes to connected only after the Live WebSocket opens. Run `python -m backend.live_probe` for a content-free Live connectivity check.
 
 ## Knowledge management
 
@@ -87,5 +87,5 @@ This cleanup is manual; schedule it externally if required by your retention pol
 
 ## Tests and troubleshooting
 
-See [testing guide](docs/TESTING.md) for commands and current results. If chat returns 503, check the key, cloud knowledge switch and model access. If Live returns a connection error, run the content-free probe, confirm WebSocket access and a Live-enabled model for the account. If the microphone is denied, allow it in the browser and reload. If the PDF upload says no extractable text, provide a reviewed Markdown/TXT transcript or enable approved OCR. Missing vector embeddings still leave keyword search operational.
+See [testing guide](docs/TESTING.md) for commands and current results. If Gemini chat fails, check the key, cloud knowledge switch and model access; disabling the switch returns attributed local source excerpts. If Live returns a connection error, run the content-free probe and check the Live API version, WebSocket access and model availability. If the microphone is denied, allow it in the browser and reload. If the PDF upload says no extractable text, provide a reviewed Markdown/TXT transcript or enable approved OCR. Missing vector embeddings still leave keyword search operational.
 
