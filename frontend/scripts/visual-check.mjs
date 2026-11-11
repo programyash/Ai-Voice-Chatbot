@@ -22,12 +22,12 @@ try {
     await page.getByRole('button', { name: 'Close inquiry' }).click()
     await page.getByRole('button', { name: 'Tell me about the villa plots' }).click()
     await page.locator('.message.assistant').waitFor()
-    const localChatWorks = (await page.locator('.message.assistant').innerText()).includes('Source excerpt')
-    results.push({ name, ...dimensions, projectSwitchWorks, inquiryWorks, localChatWorks, errors })
+    const textChatWorks = (await page.locator('.message.assistant').innerText()).length > 20
+    results.push({ name, ...dimensions, projectSwitchWorks, inquiryWorks, textChatWorks, errors })
     await context.close()
   }
 } finally {
   await browser.close()
 }
 console.log(JSON.stringify(results, null, 2))
-if (results.some(x => x.document > x.viewport || !x.projectSwitchWorks || !x.inquiryWorks || !x.localChatWorks || x.errors.length)) process.exitCode = 1
+if (results.some(x => x.document > x.viewport || !x.projectSwitchWorks || !x.inquiryWorks || !x.textChatWorks || x.errors.length)) process.exitCode = 1

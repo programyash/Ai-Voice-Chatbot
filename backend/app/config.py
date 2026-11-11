@@ -12,6 +12,7 @@ class Settings:
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "").strip()
     chat_model: str = os.getenv("GEMINI_CHAT_MODEL", "gemini-3.5-flash-lite")
     live_model: str = os.getenv("GEMINI_LIVE_MODEL", "gemini-3.8-live")
+    live_api_version: str = os.getenv("GEMINI_LIVE_API_VERSION", "v1alpha")
     embedding_model: str = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
     temperature: float = float(os.getenv("GEMINI_TEMPERATURE", "0.2"))
     max_output_tokens: int = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "1024"))

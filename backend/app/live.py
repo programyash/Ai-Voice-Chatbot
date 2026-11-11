@@ -34,7 +34,7 @@ async def live_socket(ws: WebSocket):
         allow_write = start.get("consent_to_store") is True
         await ws.send_json({"type": "session", "conversation_id": conversation_id})
         await ws.send_json({"type": "status", "value": "connecting"})
-        client = genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(api_version="v1alpha"))
+        client = genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(api_version=settings.live_api_version))
         functions = agent_functions(allow_write)
         declarations = [types.FunctionDeclaration.from_callable(callable=fn, client=client, use_json_schema=True) for fn in functions]
         function_map = {fn.__name__: fn for fn in functions}
