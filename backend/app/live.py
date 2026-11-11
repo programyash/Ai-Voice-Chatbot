@@ -73,6 +73,8 @@ async def live_socket(ws: WebSocket):
                             await session.send_client_content(turns={"role": "user", "parts": [{"text": text}]}, turn_complete=True)
 
             async def gemini_to_browser():
+                input_parts: list[str] = []
+                output_parts: list[str] = []
                 while True:
                     async for msg in session.receive():
                         if msg.tool_call:
@@ -95,17 +97,25 @@ async def live_socket(ws: WebSocket):
                             text = content.input_transcription.text.strip()
                             await ws.send_json({"type": "transcript", "role": "user", "text": text})
                             await ws.send_json({"type": "status", "value": "processing"})
-                            save_message(conversation_id, "user", text)
+                            if not input_parts or input_parts[-1] != text:
+                                input_parts.append(text)
                         if content.output_transcription and content.output_transcription.text:
                             text = content.output_transcription.text.strip()
                             await ws.send_json({"type": "transcript", "role": "assistant", "text": text})
-                            save_message(conversation_id, "assistant", text)
+                            if not output_parts or output_parts[-1] != text:
+                                output_parts.append(text)
                         if content.model_turn:
                             for part in content.model_turn.parts or []:
                                 if part.inline_data and part.inline_data.data:
                                     await ws.send_json({"type": "audio", "data": base64.b64encode(part.inline_data.data).decode("ascii")})
                                     await ws.send_json({"type": "status", "value": "speaking"})
                         if content.turn_complete:
+                            if input_parts:
+                                save_message(conversation_id, "user", " ".join(input_parts))
+                                input_parts.clear()
+                            if output_parts:
+                                save_message(conversation_id, "assistant", " ".join(output_parts))
+                                output_parts.clear()
                             await ws.send_json({"type": "status", "value": "listening"})
 
             sender = asyncio.create_task(browser_to_gemini())

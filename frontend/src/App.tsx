@@ -68,7 +68,15 @@ export default function App() {
   const [activeProject, setActiveProject] = useState<'A' | 'B'>('A')
   const [mobileMenu, setMobileMenu] = useState(false)
   const bottom = useRef<HTMLDivElement>(null)
-  const voice = useVoice((role, text) => setMessages(previous => [...previous, { role, body: text }]), setConversationId)
+  const lastVoiceRole = useRef<'user' | 'assistant' | null>(null)
+  const voice = useVoice((role, text) => setMessages(previous => {
+    if (lastVoiceRole.current === role && previous.length && previous[previous.length - 1].role === role) {
+      const last = previous[previous.length - 1]
+      return [...previous.slice(0, -1), { ...last, body: `${last.body} ${text}` }]
+    }
+    lastVoiceRole.current = role
+    return [...previous, { role, body: text }]
+  }), id => { lastVoiceRole.current = null; setConversationId(id) })
 
   useEffect(() => { request<Health>('/api/health').then(setHealth).catch(() => setHealth(null)) }, [])
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [messages, pending])
@@ -76,6 +84,7 @@ export default function App() {
   const send = async (text = draft) => {
     const trimmed = text.trim()
     if (!trimmed || pending) return
+    lastVoiceRole.current = null
     setDraft(''); setError(''); setPending(true)
     setMessages(previous => [...previous, { role: 'user', body: trimmed }])
     try {
@@ -103,7 +112,7 @@ export default function App() {
         <div className="conversation" aria-live="polite">
           {messages.length === 0 ? <div className="empty-state"><span className="empty-icon"><MessageSquare size={26} strokeWidth={1.5}/></span><h3>Where would you like to begin?</h3><p>I'm here to help you understand the projects and the community around them.</p><div className="question-list">{examples.map(question => <button key={question} onClick={() => void send(question)}>{question}<ChevronRight size={16}/></button>)}</div></div> : <div className="message-list">{messages.map((message, index) => <div className={`message ${message.role}`} key={`${index}-${message.role}`}><span className="message-label">{message.role === 'assistant' ? 'ADVISOR' : 'YOU'}</span><p>{message.body}</p></div>)}{pending && <div className="thinking"><span/><span/><span/> Thinking</div>}<div ref={bottom}/></div>}
         </div>
-        <div className="assistant-controls"><div className="voice-controls"><button className={`mic-button ${voiceActive ? 'active' : ''}`} aria-label={voiceActive ? 'Stop voice conversation' : 'Start voice conversation'} onClick={() => voiceActive ? voice.stop() : void voice.start(language, consent)} disabled={!health?.voice_available}>{voiceActive ? <Square size={20} fill="currentColor"/> : <Mic size={25}/>}</button><div><strong>{voiceActive ? voice.state === 'connecting' ? 'Connecting…' : voice.state === 'speaking' ? 'Advisor is speaking' : voice.state === 'interrupted' ? 'Interrupted' : 'Listening to you' : 'Talk with your advisor'}</strong><span>{voiceActive ? 'Tap to end conversation' : 'Tap the microphone to begin'}</span></div><div className="audio-meter" aria-label="Audio activity"><i style={{ height: `${7 + voice.level * 18}px` }}/><i style={{ height: `${10 + voice.level * 29}px` }}/><i style={{ height: `${6 + voice.level * 22}px` }}/><i style={{ height: `${9 + voice.level * 25}px` }}/></div></div>
+        <div className="assistant-controls"><div className="voice-controls"><button className={`mic-button ${voiceActive ? 'active' : ''}`} aria-label={voiceActive ? 'Stop voice conversation' : 'Start voice conversation'} onClick={() => { lastVoiceRole.current = null; if (voiceActive) voice.stop(); else void voice.start(language, consent) }} disabled={!health?.voice_available}>{voiceActive ? <Square size={20} fill="currentColor"/> : <Mic size={25}/>}</button><div><strong>{voiceActive ? voice.state === 'connecting' ? 'Connecting…' : voice.state === 'speaking' ? 'Advisor is speaking' : voice.state === 'interrupted' ? 'Interrupted' : 'Listening to you' : 'Talk with your advisor'}</strong><span>{voiceActive ? 'Tap to end conversation' : 'Tap the microphone to begin'}</span></div><div className="audio-meter" aria-label="Audio activity"><i style={{ height: `${7 + voice.level * 18}px` }}/><i style={{ height: `${10 + voice.level * 29}px` }}/><i style={{ height: `${6 + voice.level * 22}px` }}/><i style={{ height: `${9 + voice.level * 25}px` }}/></div></div>
           {(voice.error || error) && <div className="error-banner" role="alert"><CircleHelp size={17}/>{voice.error || error}</div>}
           <form className="composer" onSubmit={event => { event.preventDefault(); void send() }}><input aria-label="Message" value={draft} onChange={event => setDraft(event.target.value)} placeholder="Or type a question here…" maxLength={4000}/><button aria-label="Send message" disabled={pending || !draft.trim()}><Send size={18}/></button></form>
           <div className="controls-footer"><label className="inline-check"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)}/> Allow contact details I share to be stored</label><select aria-label="Conversation language" value={language} onChange={event => setLanguage(event.target.value)}><option value="en">English</option><option value="hi">हिन्दी</option><option value="hinglish">Hinglish</option></select></div>
